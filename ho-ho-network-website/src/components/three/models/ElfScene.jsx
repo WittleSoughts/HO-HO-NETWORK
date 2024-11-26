@@ -4,10 +4,10 @@ import dialogueScript from '../../../assets/data/dialogueScript.js'
 
 export default function ElfScene({ isSceneLoaded, ...props }) {
   const [ currentScriptLine, setCurrentScriptLine ] = useState( '' )
+  const [ currentDisplayedText, setCurrentDisplayedText ] = useState( '' )
   const [ isSpeaking, setIsSpeaking ] = useState( false )
 
   const elfRef = useRef()
-  const dialogueTextContentRef = useRef()
 
   const { nodes, materials } = useGLTF('/models/elf-scene-transformed.glb')
 
@@ -15,25 +15,54 @@ export default function ElfScene({ isSceneLoaded, ...props }) {
     return dialogueScript
   }, [] )
 
-  const displayText = ( element, text ) => {
-    element.textContent = ''
-    let i = 0
+  const typeCharToScreen = ( newChar ) => {
+    setCurrentDisplayedText( ( prev ) => prev + newChar )
+  }
 
-    const typeInterval = setInterval( () => {
-      if ( i < text.length ) {
-        element.textContent += text[ i ]
-        i++
-      } else {
-        setIsSpeaking( false )
-        clearInterval( typeInterval )
+  const onParseComplete = () => {
+    setIsSpeaking( false )
+    console.log( 'done talking' )
+  }
+
+  const parseCurrentScriptLine = ( scriptLine, onParseComplete ) => {
+    setCurrentDisplayedText( '' )
+    let index = 0
+
+    const processNext = () => {
+      if ( index >= scriptLine.length ) {
+        if ( onParseComplete ) {
+          onParseComplete()
+        }
+        return
       }
-    }, Math.floor( Math.random() * 60 ) + 12 )
+
+      const char = scriptLine[ index ]
+      if ( char === '|' ) {
+        let delayMarker = ''
+        index++
+
+        while ( index < scriptLine.length && /\d/.test( scriptLine[ index ] ) ) {
+          delayMarker += scriptLine[ index ]
+          index++
+        }
+
+        const delayMarkerParsed = parseInt( delayMarker, 10 ) || 500
+
+        setTimeout( processNext, delayMarkerParsed )
+      } else {
+        typeCharToScreen( char )
+        index++
+
+        setTimeout( processNext, Math.floor( Math.random() * 60 ) + 12 );
+      }
+    }
+    processNext()
   }
 
   const speak = () => {
-    if ( !isSpeaking && dialogueTextContentRef.current ) {
+    if ( !isSpeaking ) {
       setIsSpeaking( true )
-      displayText( dialogueTextContentRef.current, currentScriptLine )
+      parseCurrentScriptLine( currentScriptLine, onParseComplete )
     }
   }
 
@@ -68,10 +97,9 @@ export default function ElfScene({ isSceneLoaded, ...props }) {
             center
           >
             <div 
-              ref={ dialogueTextContentRef }
-              className='w-80 text-sm text-white p-4 rounded-md text-center'
+              className={ `w-80 text-sm text-white p-4 rounded-md text-center ${ isSpeaking ? '' : 'animate-pulse' }` }
             >
-              
+              { currentDisplayedText }
             </div>
           </Html>
       </group>

@@ -1,7 +1,7 @@
 const dialogueScript = {
     intro: [
         {
-            text: "Hang on, hang on...don’t rush me.",
+            text: "Hang on, |500 hang on... |600 don’t rush me.",
             action: null
         },
         {
